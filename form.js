@@ -1,55 +1,64 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('booking-form');
-    const submitButton = form.querySelector('button[type="submit"]');
-    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const formMessage = document.getElementById('form-message');
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Validate form before submission
-        if (!validateForm()) {
-            return;
-        }
+        // Clear previous messages
+        hideMessage();
         
-        // Change button state
-        const originalButtonText = submitButton.textContent;
-        submitButton.disabled = true;
-        submitButton.textContent = 'Processing...';
+        // Validate form
+        if (!validateForm()) return;
         
+        // Prepare form data
+        const formData = new FormData(form);
+        const formObject = Object.fromEntries(formData.entries());
+        
+        // Add checkbox state
+        formObject['video-documentation'] = form.querySelector('#video-documentation').checked;
+        
+        // Show loading state
+        showLoading(true);
+
         try {
-            // Submit to Formspree
-            const response = await fetch(form.action, {
+            // Send to Google Apps Script
+            const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
                 method: 'POST',
-                body: new FormData(form),
                 headers: {
-                    'Accept': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formObject)
             });
-            
+
+            const result = await response.json();
+
             if (response.ok) {
-                // Success
-                showMessage('Booking request submitted successfully! We\'ll contact you shortly.', 'success');
+                showMessage('Booking submitted successfully! Confirmation sent to your email.', 'success');
                 form.reset();
             } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to submit form');
+                throw new Error(result.message || 'Failed to submit booking');
             }
         } catch (error) {
             console.error('Error:', error);
             showMessage('Error: ' + error.message, 'error');
         } finally {
-            // Reset button state
-            submitButton.disabled = false;
-            submitButton.textContent = originalButtonText;
+            showLoading(false);
         }
     });
-    
+
     function validateForm() {
         let isValid = true;
         
         // Clear previous errors
-        document.querySelectorAll('.error-message').forEach(el => el.remove());
-        document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
-        
+        document.querySelectorAll('.error-message').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.querySelectorAll('.error').forEach(el => {
+            el.classList.remove('error');
+        });
+
         // Validate required fields
         const requiredFields = [
             'full-name', 'email', 'phone', 
@@ -57,90 +66,75 @@ document.addEventListener('DOMContentLoaded', function() {
             'destination', 'departure-date', 
             'passengers'
         ];
-        
+
         requiredFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (!field.value.trim()) {
-                markFieldAsError(field, 'This field is required');
+                showError(field, 'This field is required');
                 isValid = false;
             }
         });
-        
+
         // Validate email format
         const emailField = document.getElementById('email');
-        if (emailField.value && !isValidEmail(emailField.value)) {
-            markFieldAsError(emailField, 'Please enter a valid email address');
+        if (emailField.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField.value)) {
+            showError(emailField, 'Please enter a valid email');
             isValid = false;
         }
-        
+
         // Validate phone number
         const phoneField = document.getElementById('phone');
-        if (phoneField.value && !isValidPhone(phoneField.value)) {
-            markFieldAsError(phoneField, 'Please enter a valid phone number');
+        if (phoneField.value && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(phoneField.value)) {
+            showError(phoneField, 'Please enter a valid phone number');
             isValid = false;
         }
-        
+
         // Validate return date if provided
         const departureDate = document.getElementById('departure-date').value;
         const returnDate = document.getElementById('return-date').value;
         if (returnDate && returnDate < departureDate) {
-            markFieldAsError(document.getElementById('return-date'), 'Return date must be after departure date');
+            showError(document.getElementById('return-date'), 'Return date must be after departure date');
             isValid = false;
         }
-        
+
         return isValid;
     }
-    
-    function markFieldAsError(field, message) {
+
+    function showError(field, message) {
         field.classList.add('error');
-        const errorElement = document.createElement('div');
-        errorElement.className = 'error-message';
-        errorElement.textContent = message;
-        errorElement.style.color = '#ff4444';
-        errorElement.style.fontSize = '0.8em';
-        errorElement.style.marginTop = '5px';
-        field.parentNode.insertBefore(errorElement, field.nextSibling);
-    }
-    
-    function isValidEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    }
-    
-    function isValidPhone(phone) {
-        const re = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
-        return re.test(phone);
-    }
-    
-    function showMessage(message, type) {
-        // Remove existing messages
-        const existingMessage = document.getElementById('form-message');
-        if (existingMessage) existingMessage.remove();
-        
-        const messageElement = document.createElement('div');
-        messageElement.id = 'form-message';
-        messageElement.textContent = message;
-        messageElement.style.padding = '10px';
-        messageElement.style.margin = '15px 0';
-        messageElement.style.borderRadius = '4px';
-        
-        if (type === 'success') {
-            messageElement.style.backgroundColor = '#dff0d8';
-            messageElement.style.color = '#3c763d';
-            messageElement.style.border = '1px solid #d6e9c6';
-        } else {
-            messageElement.style.backgroundColor = '#f2dede';
-            messageElement.style.color = '#a94442';
-            messageElement.style.border = '1px solid #ebccd1';
+        const errorElement = field.nextElementSibling;
+        if (errorElement && errorElement.classList.contains('error-message')) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
         }
-        
-        form.insertBefore(messageElement, form.firstChild);
+    }
+
+    function showMessage(message, type) {
+        formMessage.textContent = message;
+        formMessage.className = type;
+        formMessage.style.display = 'block';
         
         // Auto-hide after 5 seconds
         setTimeout(() => {
-            messageElement.style.transition = 'opacity 0.5s';
-            messageElement.style.opacity = '0';
-            setTimeout(() => messageElement.remove(), 500);
+            formMessage.style.opacity = '0';
+            setTimeout(() => {
+                formMessage.style.display = 'none';
+                formMessage.style.opacity = '1';
+            }, 300);
         }, 5000);
+    }
+
+    function hideMessage() {
+        formMessage.style.display = 'none';
+    }
+
+    function showLoading(isLoading) {
+        if (isLoading) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> Processing...';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Booking Request';
+        }
     }
 });
