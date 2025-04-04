@@ -130,44 +130,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Form submission
-const bookingForm = document.getElementById('booking-form');
-if (bookingForm) {
-    bookingForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const submitButton = this.querySelector('button[type="submit"]');
-        const originalButtonText = submitButton.textContent;
-        
-        submitButton.disabled = true;
-        submitButton.textContent = 'Sending...';
-        
-        fetch(this.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                alert('Thank you for your booking request! We will contact you shortly.');
-                this.reset();
-            } else {
-                throw new Error('Network response was not ok');
-            }
-        })
-        .catch(error => {
-            alert('There was a problem submitting your form. Please try again or contact us directly.');
-            console.error('Error:', error);
-        })
-        .finally(() => {
-            submitButton.disabled = false;
-            submitButton.textContent = originalButtonText;
-        });
-    });
-}
 
 // Lazy loading for images
 document.addEventListener('DOMContentLoaded', function() {
