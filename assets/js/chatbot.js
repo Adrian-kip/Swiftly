@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Default response
         const defaultResponses = [
             "I'd be happy to help with that. Could you provide more details about your inquiry?",
-            "For more specific information about that, I recommend contacting our concierge team directly at +1 (555) 123-4567.",
+            "For more specific information about that, I recommend contacting our concierge team directly at +254 703 9770 54.",
             "I'm here to assist you with any questions about our luxury air travel services. What would you like to know?",
             "That's a great question! Our website has detailed information, or I can connect you with a human representative if you'd prefer."
         ];
